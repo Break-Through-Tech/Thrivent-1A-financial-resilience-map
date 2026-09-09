@@ -8,8 +8,9 @@
 | Valerie Weiner   | @valerieanne12 | Data collection, exploratory data analysis (EDA), dataset documentation  |
 | Amina Hassan     | @aminahassan  | Data preprocessing, feature engineering, data validation                 |
 | Ansa Kanwal      | @kansa05      | Model selection, hyperparameter tuning, model training and optimization  |
-| Sarah Wheeler       | @sarahaawheeler    | Model evaluation, performance analysis, results interpretation           |
-
+| Sarah Wheeler       | @sarahaawheeler    | Model evaluation, performance analysis, results interpretation   
+| Yasirah Waites   |  @Ywaites     | Feature Engineering, Data exploration, Model training                    |
+ 
 ---
 
 ## 🎯 **Project Highlights**
