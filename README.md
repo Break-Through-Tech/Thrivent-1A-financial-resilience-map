@@ -25,8 +25,7 @@
 ---
 
 ## 👩🏽‍💻 **Setup and Installation**
-**Provide step-by-step instructions so someone else can run your code and reproduce your results.**
-IDE Used: Google Colab
+**IDE Used:** Google Colab
 
 To get started with this project, first clone this repository to your computer with the following command:
 
