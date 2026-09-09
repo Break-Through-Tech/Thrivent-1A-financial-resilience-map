@@ -2,8 +2,6 @@
 
 ### 👥 **Team Members**
 
-**Example:**
-
 | Name             | GitHub Handle | Contribution                                                             |
 |------------------|---------------|--------------------------------------------------------------------------|
 | Taylor Nguyen    | @taylornguyen | Data exploration, visualization, overall project coordination            |
