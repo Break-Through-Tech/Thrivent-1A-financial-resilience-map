@@ -17,6 +17,7 @@
 | Chris Park       | @chrispark    | Model evaluation, performance analysis, results interpretation           |
 | Ethan Wang      | @etwa5465    | Data preprocessing, feature engineering, visualization           |
 
+
 ---
 
 ## 🎯 **Project Highlights**
