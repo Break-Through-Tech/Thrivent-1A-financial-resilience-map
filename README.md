@@ -32,6 +32,7 @@ To get started with this project, first clone this repository to your computer w
 ```bash
 git clone https://github.com/Break-Through-Tech/Thrivent-1A-financial-resilience-map.git
 cd Thrivent-1A-financial-resilience-map
+```
 
 Then, install dependencies via the requirements.txt:
 
@@ -40,6 +41,7 @@ python -m venv .venv
 source .venv/bin/activate   # macOS/Linux
 .\.venv\Scripts\activate    # Windows
 pip install -r requirements.txt
+```
 
 Relevant datasets can be found in the /data folder. The notebook should automatically point to this dataset, so ensure that the data is present in this folder. The dataset is titled "public2025.csv."
 
