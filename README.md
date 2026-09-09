@@ -9,7 +9,7 @@
 | Ansa Kanwal    | @kansa05        | Model selection, hyperparameter tuning, model training and optimization |
 | Sarah Wheeler  | @sarahaawheeler | Model evaluation, performance analysis, results interpretation          |
 | Yasirah Waites | @Ywaites        | Feature Engineering, Data exploration, Model training                   |
-
+| Ethan Wang     | @etwa5465       | Data preprocessing, feature engineering, visualization                  |
 ---
 
 ## 🎯 **Project Highlights**
