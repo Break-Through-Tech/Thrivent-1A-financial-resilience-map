@@ -24,14 +24,26 @@
 ---
 
 ## 👩🏽‍💻 **Setup and Installation**
-**Provide step-by-step instructions so someone else can run your code and reproduce your results. Depending on your setup, include:**
+**Provide step-by-step instructions so someone else can run your code and reproduce your results.**
 IDE Used: Google Colab
 
-* How to clone the repository
-* How to install dependencies
-* How to set up the environment
-* How to access the dataset(s)
-* How to run the notebook or scripts
+To get started with this project, first clone this repository to your computer with the following command:
+
+```bash
+git clone https://github.com/Break-Through-Tech/Thrivent-1A-financial-resilience-map.git
+cd Thrivent-1A-financial-resilience-map
+
+Then, install dependencies via the requirements.txt:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # macOS/Linux
+.\.venv\Scripts\activate    # Windows
+pip install -r requirements.txt
+
+Relevant datasets can be found in the /data folder. The notebook should automatically point to this dataset, so ensure that the data is present in this folder. The dataset is titled "public2025.csv."
+
+Load the notebook in your preferred IDE (we used Colab) and run all cells.
 
 ---
 
