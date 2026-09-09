@@ -1,4 +1,4 @@
-# AI Studio Challenge Project Title
+# Thrivent1A Financial Resilience Map
 
 ### 👥 **Team Members**
 
