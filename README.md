@@ -10,6 +10,7 @@
 | Sarah Wheeler  | @sarahaawheeler | Model building, performance analysis, results interpretation                        |
 | Yasirah Waites | @Ywaites        | Feature Engineering, Data exploration, Model training                               |
 | Ethan Wang     | @etwa5465       | Data preprocessing, feature engineering, visualization                              |
+| Pirm Dhararag  | @Pirm-Dhararag  | EDA, model training, model explainability                                           |
 
 ---
 
