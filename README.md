@@ -66,16 +66,26 @@ Our intended deliverable is decision support for humans, particularly for financ
 
 ## 📊 **Data Exploration**
 
-**You might consider describing the following (as applicable):**
+We use the **2025 Survey of Household Economics and Decisionmaking (SHED)** dataset. The raw dataset contains **12,934 respondents and 815 columns**. Respondent IDs (`shedid`) and the four supplied survey weights (`weight`, `weight_pop`, `panel_weight`, and `panel_weight_pop`) were validated before preprocessing.
 
-- The dataset(s) used: origin, format, size, type of data
-- Data exploration and preprocessing approaches
-- Insights from your Exploratory Data Analysis (EDA)
-- Challenges and assumptions when working with the dataset(s)
+### Data Exploration and Preprocessing
 
-**Potential visualizations to include:**
+- Reviewed missing values, variable types, and survey responses.
+- Identified and excluded 357 imputation flag (\_iflag) columns from the model features.
+- Kept all 12,934 respondents instead of removing rows with missing values.
+- Preserved survey skip responses as `__NOT_ASKED__`.
+- Identified **446 candidate features**:
+  - 23 numeric
+  - 421 categorical
+  - 2 ordinal
+- Filled missing values and converted categorical and ordinal responses into a format suitable for modeling.
+- Used weight_pop to calculate population-level distributions.
+- Checked for potential outliers without automatically removing them.
+- Exported a cleaned version of the dataset for future analysis.
 
-- Plots, charts, heatmaps, feature visualizations, sample dataset images
+### Key Considerations
+
+Survey blanks can represent questions that were not asked rather than missing responses. We therefore kept these responses separate from regular missing values. Survey weights were also preserved for population-level analysis.
 
 ---
 
