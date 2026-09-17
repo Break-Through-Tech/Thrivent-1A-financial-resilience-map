@@ -52,13 +52,17 @@ Load the notebook in your preferred IDE (we used Colab) and run all cells.
 
 ## 🏗️ **Project Overview**
 
-**Describe:**
+The Financial Resilience Map is a Fall 2026 Break Through Tech AI Studio challenge hosted in collaboration with Thrivent.
 
-- How this project is connected to the Break Through Tech AI Program
-- Your AI Studio host company and the project objective and scope
-- The real-world significance of the problem and the potential impact of your work
+The project investigates a question relevant to financial services, community lenders, credit unions, financial-education organizations, and public agencies: Which households are financially fragile, and what factors are associated with that fragility?
 
----
+Traditional measures such as credit scores primarily describe a person's history of repaying debt. Financial resilience captures a different dimension: whether a household can absorb an unexpected financial shock, such as a car repair, reduction in working hours, or medical expense.
+
+The Federal Reserve's Survey of Household Economics and Decisionmaking provides a direct way to study this question. One of its headline measures asks whether adults could cover a $400 emergency expense using cash or its equivalent. In the 2025 survey, 63% of adults reported being able to do so.
+
+This project moves beyond this population-level statistic by developing machine-learning models that estimate household financial fragility and explain the factors associated with each prediction.
+
+Our intended deliverable is decision support for humans, particularly for financial education and informed conversations. It is not intended to automate financial decisions or determine an individual's eligibility, creditworthiness, or access to financial products.
 
 ## 📊 **Data Exploration**
 
@@ -111,19 +115,24 @@ Load the notebook in your preferred IDE (we used Colab) and run all cells.
 
 ## 📝 **License**
 
-Specify how your project can be used by others. Choose an appropriate license and link it here (e.g., MIT, Apache 2.0). Make sure your Challenge Advisor approves of the selected license type.
-
-**Example:**
 This project is licensed under the MIT License.
 
 ---
 
 ## 📄 **References** (Optional but encouraged)
 
-Cite relevant papers, articles, or resources that supported your project.
+Board of Governors of the Federal Reserve System. Survey of Household Economics and Decisionmaking (SHED). DOI: 10.17016/datasets.002
 
 ---
 
 ## 🙏 **Acknowledgements** (Optional but encouraged)
 
-Thank your Challenge Advisor, host company representatives, TA, and others who supported your project.
+This project is part of the Break Through Tech AI Studio – Fall 2026 program.
+
+**Host Organization:** Thrivent
+**Challenge Advisor:** Nathan Rickert
+**AI Studio Coach:** Julio Contreras
+
+We thank our Challenge Advisor, AI Studio Coach, Break Through Tech staff, and team members for their guidance and collaboration throughout the project.
+
+We also acknowledge the Board of Governors of the Federal Reserve System for making the Survey of Household Economics and Decisionmaking public-use microdata, questionnaires, codebooks, and published response tables available for research and educational use.
