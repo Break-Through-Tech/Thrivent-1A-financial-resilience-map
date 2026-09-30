@@ -44,9 +44,16 @@ source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
-Relevant datasets can be found in the /data folder. The notebook should automatically point to this dataset, so ensure that the data is present in this folder. The dataset is titled "public2025.csv."
+### Project structure
 
-Load the notebook in your preferred IDE (we used Colab) and run all cells.
+```
+data/
+  raw/public2025.csv                   # original SHED 2025 public-use file from the Federal Reserve (never edited)
+  processed/public2025_clean.csv       # written by 01
+notebooks/
+  01_clean_survey.ipynb                # validate the raw survey, mark skip logic as __NOT_ASKED__, export the clean CSV
+  02_replicate_fed_estimate.ipynb      # reproduce the Fed's published 63% $400-expense estimate
+```
 
 ---
 
