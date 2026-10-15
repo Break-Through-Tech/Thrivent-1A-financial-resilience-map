@@ -1,0 +1,10 @@
+comparison,metric,lower,upper,share of draws > 0
+Gradient boosting - Logistic regression,ROC AUC,-0.00017164305008135196,0.006850544808712398,0.97
+Gradient boosting - Logistic regression,Brier,-0.004988355404914169,0.0013431084152799111,0.116
+Gradient boosting - Logistic regression,ECE,-0.010936888884444563,0.013361565570163584,0.616
+Gradient boosting - Random forest,ROC AUC,0.00604740641279049,0.013892348541513812,1.0
+Gradient boosting - Random forest,Brier,-0.014226042974018931,-0.007908042972497413,0.0
+Gradient boosting - Random forest,ECE,-0.042601371074754944,-0.011942662923520747,0.0
+Logistic regression - Random forest,ROC AUC,0.0021096645928848716,0.01074866549496301,0.998
+Logistic regression - Random forest,Brier,-0.012779390964189754,-0.005323700906846782,0.0
+Logistic regression - Random forest,ECE,-0.04339011104738593,-0.012373879983295425,0.0
