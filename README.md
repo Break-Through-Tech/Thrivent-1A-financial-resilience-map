@@ -78,7 +78,9 @@ Thrivent-1A-financial-resilience-map/
 │   ├── 05_gradient_boosting.ipynb
 │   ├── 06_tree_based_model.ipynb
 │   ├── 07_model_evaluation.ipynb
-│   └── 08_success_metrics.ipynb
+│   ├── 08_success_metrics.ipynb
+│   ├── 09_segmentation.ipynb
+│   └── 10_final_model_comparison.ipynb
 │
 ├── models/
 │   ├── README.md
@@ -162,7 +164,7 @@ Random Forest	06_tree_based_model.ipynb	Bagged decision-tree ensemble with cross
 Sensitivity Analysis and Model Comparison
 Each modeling approach is evaluated with and without the 16 emergency-finance variables. This sensitivity analysis investigates whether performance is driven primarily by questions closely related to the target or whether broader household, demographic, and financial characteristics also provide predictive information.
 
-07_model_evaluation.ipynb provides additional evaluation of the logistic regression baseline, while 08_success_metrics.ipynb consolidates comparisons across all three approaches.
+07_model_evaluation.ipynb provides additional evaluation of the logistic regression baseline, while 08_success_metrics.ipynb consolidates comparisons across all three approaches. 10_final_model_comparison.ipynb combines the two into the final comparison, adding confusion matrices for all three models, a threshold trade-off, a subgroup check, and a model recommendation.
 
 The shared evaluation includes ROC AUC, PR AUC, Brier score, log loss, classification metrics, calibration analysis, bootstrap confidence intervals, and SHAP-based feature interpretation.
 
@@ -178,7 +180,7 @@ We evaluated Logistic Regression, Gradient Boosting, and Random Forest using the
 | Model (with EF) | ROC AUC | PR AUC | Brier Score ↓ | Accuracy | Recall |
 |---|---:|---:|---:|---:|---:|
 | Logistic Regression | 0.925 | 0.875 | 0.103 | 85.6% | 78.0% |
-| Gradient Boosting | **0.929** | **0.881** | **0.101** | **85.8%** | **78.2%** |
+| Gradient Boosting | **0.928** | **0.880** | **0.100** | **86.2%** | **79.2%** |
 | Random Forest | 0.919 | 0.869 | 0.111 | 85.1% | 76.7% |
 | Training Prevalence Baseline | 0.500 | 0.370 | 0.233 | 63.0% | 0.0% |
 
@@ -188,20 +190,28 @@ All three trained models substantially outperform the reference baseline. Gradie
 
 1. *Gradient Boosting and Logistic Regression perform comparably.*
 
-Gradient Boosting achieves the highest ROC AUC (0.929) and lowest Brier score (0.101). However, paired bootstrap confidence intervals for the differences between Gradient Boosting and Logistic Regression include zero, indicating that their observed performance differences are not clearly distinguishable given the held-out sample. Random Forest performs slightly worse on discrimination and probability accuracy, with a ROC AUC of 0.919 and Brier score of 0.111.
+Gradient Boosting achieves the highest ROC AUC (0.928) and lowest Brier score (0.100). However, paired bootstrap confidence intervals for the differences between Gradient Boosting and Logistic Regression include zero, indicating that their observed performance differences are not clearly distinguishable given the held-out sample. Random Forest performs slightly worse on discrimination and probability accuracy, with a ROC AUC of 0.919 and Brier score of 0.111.
 
 2. *The models identify most financially fragile respondents.*
 
-At a classification threshold of 0.5, all three models achieve approximately 77–78% recall, correctly identifying more than three-quarters of financially fragile respondents. Precision ranges from approximately 82% to 83%, indicating that most respondents predicted to be financially fragile belong to the positive class.
+At a classification threshold of 0.5, all three models achieve approximately 77–79% recall, correctly identifying more than three-quarters of financially fragile respondents. Precision ranges from approximately 82% to 83%, indicating that most respondents predicted to be financially fragile belong to the positive class.
 
 3. *Removing emergency-finance questions reduces performance, but there still remains a predictive signal.*
 
-We conducted a sensitivity analysis excluding 16 emergency-finance (EF) predictors closely related to the outcome variable. Removing these features reduces ROC AUC by approximately 0.011–0.013 across the three models. However, all models maintain ROC AUC scores above 0.90, suggesting that broader household, financial, and demographic characteristics also contain information associated with financial fragility.
+We conducted a sensitivity analysis excluding 16 emergency-finance (EF) predictors closely related to the outcome variable. Removing these features reduces ROC AUC by approximately 0.011–0.012 across the three models. However, all models maintain ROC AUC scores above 0.90, suggesting that broader household, financial, and demographic characteristics also contain information associated with financial fragility.
 
 
 4. *Feature importance reveals several consistent predictors.*
 
-We used SHAP to examine which survey questions contribute most strongly to model predictions. The models consistently identify C4A, EF1, EF2, K21_d, FD3, and B2 among their ten highest-ranked predictors. While the models share several important predictors, their complete importance rankings differ. 
+We used SHAP to examine which survey questions contribute most strongly to model predictions. The models consistently identify C4A, EF1, EF2, K21_d, and FD3 among their ten highest-ranked predictors. While the models share several important predictors, their complete importance rankings differ. Gradient Boosting relies more on race and ethnicity (`race_5cat` ranks 20th of 425 questions, vs 44th for Logistic Regression and 57th for Random Forest).
+
+5. *Performance differs across demographic groups.*
+
+All three models rank Black respondents less accurately (ROC AUC about 0.85, vs 0.92–0.93 for White respondents) and understate their risk. They also miss more fragile respondents in groups where fragility is less common, such as incomes of $100,000 or more and ages 75+. Because every model shows these patterns, they reflect the data rather than one model's design.
+
+6. *Recommended model: Logistic Regression.*
+
+Logistic Regression performs as well as Gradient Boosting within test-set noise, is the best calibrated, and can be explained directly through its coefficients. It also relies less on race and ethnicity and on the emergency-finance questions. Gradient Boosting is kept as a cross-check, and Random Forest is not carried forward. See 10_final_model_comparison.ipynb for the full comparison.
 
 ---
 
