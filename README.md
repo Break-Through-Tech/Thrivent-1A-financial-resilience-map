@@ -28,7 +28,7 @@ Completed work:
 
  - Identified 446 exploratory candidate features during initial preprocessing and refined the final modeling dataset to 425 predictors after additional exclusions to reduce target leakage and remove survey administration variables.
 
-**Model development:** See the model results and artifacts sections for the latest training, validation, and evaluation status.
+*Model development:* See the model results and artifacts sections for the latest training, validation, and evaluation status.
 ---
 
 ## 👩🏽‍💻 **Setup and Installation**
@@ -231,13 +231,13 @@ This project is licensed under the MIT License.
 
 ---
 
-## 📄 **References** (Optional but encouraged)
+## 📄 **References**
 
 Board of Governors of the Federal Reserve System. Survey of Household Economics and Decisionmaking (SHED). DOI: 10.17016/datasets.002
 
 ---
 
-## 🙏 **Acknowledgements** (Optional but encouraged)
+## 🙏 **Acknowledgements** 
 
 This project is part of the Break Through Tech AI Studio – Fall 2026 program.
 
