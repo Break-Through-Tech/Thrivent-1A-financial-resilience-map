@@ -192,6 +192,9 @@ All three trained models substantially outperform the reference baseline. Gradie
 
 Gradient Boosting achieves the highest ROC AUC (0.928) and lowest Brier score (0.100). However, paired bootstrap confidence intervals for the differences between Gradient Boosting and Logistic Regression include zero, indicating that their observed performance differences are not clearly distinguishable given the held-out sample. Random Forest performs slightly worse on discrimination and probability accuracy, with a ROC AUC of 0.919 and Brier score of 0.111.
 
+![Calibration curves for the three models](outputs/task4/figures/calibration.png)
+*Calibration: points on the diagonal mean predicted probabilities match observed fragility rates. Logistic Regression (ECE 0.015) and Gradient Boosting (0.019) track the diagonal closely; Random Forest (0.049) overestimates low risks and underestimates high ones.*
+
 2. *The models identify most financially fragile respondents.*
 
 At a classification threshold of 0.5, all three models achieve approximately 77–79% recall, correctly identifying more than three-quarters of financially fragile respondents. Precision ranges from approximately 82% to 83%, indicating that most respondents predicted to be financially fragile belong to the positive class.
@@ -208,6 +211,9 @@ We used SHAP to examine which survey questions contribute most strongly to model
 5. *Performance differs across demographic groups.*
 
 All three models rank Black respondents less accurately (ROC AUC about 0.85, vs 0.92–0.93 for White respondents) and understate their risk. They also miss more fragile respondents in groups where fragility is less common, such as incomes of $100,000 or more and ages 75+. Because every model shows these patterns, they reflect the data rather than one model's design.
+
+![ROC AUC, recall, and calibration gap by race and ethnicity](outputs/task4/figures/subgroups_race.png)
+*Performance by race and ethnicity. Calibration gap is mean predicted probability minus observed fragility rate; negative values mean risk is understated. Small groups (Asian n=142, Other n=64) are uncertain.*
 
 6. *Recommended model: Logistic Regression.*
 
