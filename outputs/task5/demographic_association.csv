@@ -1,0 +1,7 @@
+demographic,column,Cramér's V
+Race and ethnicity,race_5cat,0.16510290362090735
+Age group,ppagecat,0.5520306895288387
+Education,educ_4cat,0.1672963618100807
+Gender,malefemale,0.042700539402658146
+Census region,ppreg4,0.032099112769273866
+Metro / non-metro,ppmsacat,0.059920209412873765
