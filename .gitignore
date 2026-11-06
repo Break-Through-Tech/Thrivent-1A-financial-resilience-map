@@ -16,3 +16,9 @@ Thumbs.db
 
 # Trained model binaries (JSON metadata in models/ is committed)
 models/*.joblib
+
+# Keeps the local prediction database/SQLite temporary files out of Git
+financial_predictions.db
+financial_predictions.db-journal
+financial_predictions.db-wal
+financial_predictions.db-shm
