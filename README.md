@@ -28,7 +28,7 @@ Completed work:
 
  - Identified 446 exploratory candidate features during initial preprocessing and refined the final modeling dataset to 425 predictors after additional exclusions to reduce target leakage and remove survey administration variables.
 
-*Model development:* See the model results and artifacts sections for the latest training, validation, and evaluation status.
+**Model development:** See the model results and artifacts sections for the latest training, validation, and evaluation status.
 ---
 
 ## 👩🏽‍💻 **Setup and Installation**
