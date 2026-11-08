@@ -50,3 +50,4 @@ models/*.pkl
 *.log
 *.tmp
 *.bak
+/outputs/predictions.csv
