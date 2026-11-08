@@ -51,6 +51,58 @@ source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
+For those who want to train the recommended model or generate predictions locally without working through the notebooks, we have also added standalone Python scripts in `src/`. Instructions for that workflow are provided below.
+
+**Requirements:** Python 3.10 and the packages listed in `requirements.txt`.
+
+#### 1. Install dependencies
+
+From the repository root, create and activate a virtual environment using the instructions above, then run:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+#### 2. Train the model
+
+```bash
+python -m src.train
+```
+
+The training script uses the existing 2025 SHED modeling dataset and feature specifications. It follows the methodology in `04_logistic_regression_baseline.ipynb`, including:
+
+- Our 80/20 train-test split
+- Five-fold cross-validation
+- Population survey weights
+- Selection of the regularization strength using weighted log loss
+
+The fitted model and its metadata are saved as:
+
+- `models/logistic_regression_with_ef.joblib`
+- `models/logistic_regression_with_ef.json`
+
+The `.joblib` file is generated locally and excluded from Git. Users must train the model before running predictions.
+
+#### 3. Generate predictions
+
+```bash
+python -m src.predict --input data/processed/model_dataset_2025.csv --output outputs/predictions.csv
+```
+
+The prediction script loads the fitted Logistic Regression pipeline, validates the required input features, and exports the results to a CSV file.
+
+The output contains:
+
+| Column | Description |
+|---|---|
+| `shedid` | Respondent identifier, if available |
+| `fragility_probability` | Predicted probability of financial fragility |
+| `predicted_fragile` | Binary classification using a 0.5 threshold |
+
+A classification of `1` indicates predicted financial fragility, while `0` indicates predicted non-fragility.
+
+The input CSV must contain the features listed in the saved model metadata. The supplied modeling dataset can be used to demonstrate the inference workflow, although predictions on training observations should not be used as independent performance estimates.
+
 ### Project structure
 
 ```
