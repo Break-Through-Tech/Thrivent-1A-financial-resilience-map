@@ -1,1 +1,12 @@
 
+numpy>=1.26,<3
+pandas>=2.2,<3
+scipy>=1.13,<2
+scikit-learn==1.7.2
+matplotlib>=3.8,<4
+seaborn>=0.13,<1
+joblib>=1.4,<2
+shap>=0.46,<1
+kmodes>=0.12.2,<1
+jupyterlab>=4,<5
+ipykernel>=6,<7
