@@ -125,6 +125,18 @@ pytest
 
 `tests/test_inference.py` runs three representative profiles (financially secure, getting by, and financially stretched) through the full inference path and checks input validation.
 
+
+#### 6. Continuous Integration
+
+This project uses **GitHub Actions** to automatically check the code when changes are pushed to the `main` branch or when a pull request targets `main`.
+
+The CI workflow:
+- Installs project dependencies.
+- Runs code-quality checks using Flake8.
+- Runs automated tests using pytest when test files are available.
+
+The workflow is located at `.github/workflows/ci.yml`.
+
 ### Project structure
 
 ```
