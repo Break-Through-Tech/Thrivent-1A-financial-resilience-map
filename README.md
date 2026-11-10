@@ -103,6 +103,28 @@ A classification of `1` indicates predicted financial fragility, while `0` indic
 
 The input CSV must contain the features listed in the saved model metadata. The supplied modeling dataset can be used to demonstrate the inference workflow, although predictions on training observations should not be used as independent performance estimates.
 
+#### 4. Run the prediction app
+
+```bash
+streamlit run app.py
+```
+
+The Streamlit app asks 13 questions covering the strongest predictors (emergency savings, credit card balances, spending versus income, food sufficiency, income, and household details) and shows the predicted probability of financial fragility and the resulting classification. The sidebar can load three example profiles.
+
+The model needs all 425 survey inputs. Any question the user skips, and every input the app does not ask about, is filled in from the 100 training respondents whose answers are most like the user's: the most common answer, or the median for numeric inputs. Matches on rare answers count for more than matches on common ones. The completed row is then passed through the saved preprocessing and model pipeline unchanged. This logic is in `src/inference.py`.
+
+On 500 held-out test respondents, predictions from the 13 questions alone reach a ROC AUC of 0.913, compared with 0.920 for the full model, and give the same classification 93% of the time.
+
+If `models/logistic_regression_with_ef.joblib` is missing, the app refits the pipeline once using the regularization strength recorded in `models/logistic_regression_with_ef.json`. This matches the final fit in `src/train.py` without repeating cross-validation, and the result is saved for later runs.
+
+#### 5. Run the tests
+
+```bash
+pytest
+```
+
+`tests/test_inference.py` runs three representative profiles (financially secure, getting by, and financially stretched) through the full inference path and checks input validation.
+
 ### Project structure
 
 ```
