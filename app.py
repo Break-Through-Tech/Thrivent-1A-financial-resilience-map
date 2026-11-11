@@ -1,155 +1,149 @@
-"""Streamlit app: predict financial fragility from a short questionnaire.
+"""Financial Resilience Map prediction form."""
 
-Run from the repository root:
-
-    streamlit run app.py
-"""
+import logging
 
 import streamlit as st
 
-from src.inference import (
-    EXAMPLE_PROFILES,
-    INPUT_FIELDS,
-    FragilityPredictor,
-)
+from src.inference import EXAMPLE_PROFILES, INPUT_FIELDS, FragilityPredictor
+
+logger = logging.getLogger(__name__)
+SECTIONS = {"finances": "Your finances", "household": "Your household"}
 
 
-SKIP = "Prefer not to say"
-
-st.set_page_config(page_title="Financial Resilience Map", page_icon="💵")
-
-
-@st.cache_resource(show_spinner="Loading model...")
+@st.cache_resource(show_spinner="Loading the prediction model…")
 def get_predictor():
     return FragilityPredictor.from_artifacts()
 
 
-def blank_answer(f):
-    return None if f.kind == "number" else SKIP
+def load_profile():
+    profile = EXAMPLE_PROFILES.get(st.session_state["profile"], {})
+    for field in INPUT_FIELDS:
+        answer = profile.get(field.key)
+        if field.kind == "number":
+            answer = "" if answer is None else str(answer)
+        st.session_state[field.key] = answer
 
 
-def load_example():
-    """Copy the chosen example profile into the form widgets."""
-    profile = EXAMPLE_PROFILES.get(st.session_state["example"], {})
-    for f in INPUT_FIELDS:
-        st.session_state[f.key] = profile.get(f.key, blank_answer(f))
+def validate_answers(raw_answers, predictor):
+    answers = {}
+    errors = []
+    for field in INPUT_FIELDS:
+        value = raw_answers[field.key]
+        if value is None or (isinstance(value, str) and not value.strip()):
+            errors.append(f"Answer this question: {field.label}")
+            continue
 
-
-# Widgets read their starting values from session state, which also lets
-# the example menu fill in the form.
-for _f in INPUT_FIELDS:
-    st.session_state.setdefault(_f.key, blank_answer(_f))
-
-
-try:
-    predictor = get_predictor()
-except Exception as exc:  # show the reason instead of a blank page
-    st.error(f"The model could not be loaded: {exc}")
-    st.stop()
-
-
-st.title("Financial Resilience Map")
-st.write(
-    "Answer a few questions to estimate how likely a household is to be "
-    "**financially fragile**: unable to cover a $400 emergency expense with "
-    "cash or its equivalent."
-)
-
-with st.sidebar:
-    st.header("Try an example")
-    st.selectbox(
-        "Load a sample profile",
-        ["(none)", *EXAMPLE_PROFILES],
-        key="example",
-        on_change=load_example,
-    )
-    st.header("About the model")
-    st.write(
-        f"**Model:** `{predictor.metadata['model']}`  \n"
-        f"**Threshold:** {predictor.threshold:.2f}  \n"
-        f"**Inputs used by the model:** {len(predictor.features)}"
-    )
-    st.caption(
-        "Trained on the Federal Reserve's 2025 Survey of Household "
-        "Economics and Decisionmaking (SHED). Questions you skip, and "
-        "survey inputs the form does not ask about, are filled in from "
-        "the training respondents whose answers are most like yours."
-    )
-
-
-answers = {}
-with st.form("questionnaire"):
-    sections = {"finances": "Your finances", "household": "Your household"}
-    for section, title in sections.items():
-        st.subheader(title)
-        for f in INPUT_FIELDS:
-            if f.section != section:
+        if field.kind == "number":
+            low, high = predictor.number_range(field.key)
+            try:
+                value = int(value.strip())
+            except ValueError:
+                value = None
+            if value is None or not low <= value <= high:
+                errors.append(
+                    f"{field.label} must be a whole number from {low} to {high}."
+                )
                 continue
-            if f.kind == "number":
-                low, high = predictor.number_range(f.key)
-                answers[f.key] = st.number_input(
-                    f.label,
-                    min_value=low,
-                    max_value=high,
-                    step=1,
-                    placeholder=SKIP,
-                    key=f.key,
-                )
-            else:
-                choice = st.selectbox(
-                    f.label,
-                    [SKIP, *predictor.options(f.key)],
-                    key=f.key,
-                )
-                answers[f.key] = None if choice == SKIP else choice
+        elif value not in predictor.options(field.key):
+            errors.append(f"Choose a listed answer for: {field.label}")
+            continue
+        answers[field.key] = value
+    return answers, errors
 
-    submitted = st.form_submit_button("Predict", type="primary")
+def main():
+    st.set_page_config(page_title="Financial Resilience Map")
+    st.title("Financial Resilience Map")
+    st.write(
+        "Estimate the probability that a household could not cover a $400 "
+        "emergency expense with cash or its equivalent."
+    )
+    st.caption(f"Answer all {len(INPUT_FIELDS)} questions to request a prediction.")
 
+    try:
+        predictor = get_predictor()
+    except Exception:
+        logger.exception("Could not initialize the predictor")
+        st.error(
+            "The prediction model could not load. Check that you installed "
+            "requirements.txt and that the project includes its processed "
+            "survey data and model metadata. See the terminal for details."
+        )
+        return
 
-if submitted:
+    with st.sidebar:
+        st.header("Sample profiles")
+        st.selectbox(
+            "Fill the questionnaire with an example",
+            EXAMPLE_PROFILES,
+            index=None,
+            placeholder="Choose a sample profile",
+            key="profile",
+            on_change=load_profile,
+        )
+        st.button("Clear answers", on_click=clear_answers)
+
+    raw_answers = {}
+    with st.form("questionnaire"):
+        for section, title in SECTIONS.items():
+            st.subheader(title)
+            for field in INPUT_FIELDS:
+                if field.section != section:
+                    continue
+                if field.kind == "number":
+                    low, high = predictor.number_range(field.key)
+                    answer = st.text_input(
+                        field.label,
+                        placeholder=f"Whole number from {low} to {high}",
+                        help=field.help or None,
+                        key=field.key,
+                    )
+                else:
+                    answer = st.selectbox(
+                        field.label,
+                        predictor.options(field.key),
+                        index=None,
+                        placeholder="Choose an answer",
+                        help=field.help or None,
+                        key=field.key,
+                    )
+                raw_answers[field.key] = answer
+        submitted = st.form_submit_button("Predict", type="primary")
+
+    if not submitted:
+        return
+
+    answers, errors = validate_answers(raw_answers, predictor)
+    if errors:
+        st.error("Complete or correct these answers, then select Predict again.")
+        for error in errors:
+            st.write(f"- {error}")
+        return
+
     try:
         result = predictor.predict(answers)
-    except (KeyError, ValueError) as exc:
-        st.error(f"Could not generate a prediction: {exc}")
-        st.stop()
+    except (KeyError, ValueError):
+        logger.exception("Prediction failed")
+        st.error(
+            "The model could not score these answers. Review your inputs "
+            "and try again. If the error persists, see the terminal for details."
+        )
+        return
 
     st.header("Prediction")
-    col1, col2 = st.columns(2)
-    col1.metric("Probability of financial fragility",
-                f"{result.probability:.0%}")
-    col2.metric("Classification", result.label)
-    st.progress(result.probability)
+    probability, classification = st.columns(2)
+    probability.metric("Estimated probability of financial fragility",
+                       f"{result.probability:.1%}")
+    classification.metric("Classification", result.label)
+    st.caption(f"The model classifies scores of {result.threshold:.1%} or higher "
+               "as financially fragile.")
+    st.caption("The model estimates additional survey inputs using similar "
+               "training respondents.")
 
-    if result.is_fragile:
-        st.warning(
-            f"The model's estimate is at or above the {result.threshold:.0%} "
-            "threshold, so this household is classified as financially "
-            "fragile."
-        )
-    else:
-        st.success(
-            f"The model's estimate is below the {result.threshold:.0%} "
-            "threshold, so this household is classified as not financially "
-            "fragile."
-        )
 
-    if result.n_answered == 0:
-        st.info(
-            "No questions were answered, so this is the prediction for a "
-            "typical survey respondent."
-        )
+def clear_answers():
+    st.session_state["profile"] = None
+    load_profile()
 
-    with st.expander("Details"):
-        st.write(
-            f"You answered {result.n_answered} of {len(INPUT_FIELDS)} "
-            f"questions. The model uses {result.n_features} survey inputs; "
-            "the rest are filled in from the 100 training respondents whose "
-            "answers are most like yours, then the saved preprocessing and "
-            "model pipeline is applied."
-        )
-        st.json(result.answered)
 
-    st.caption(
-        "This is a statistical estimate from survey data, not financial "
-        "advice or an assessment of any individual."
-    )
+if __name__ == "__main__":
+    main()
