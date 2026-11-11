@@ -44,6 +44,13 @@ dist/
 
 # Trained model binaries
 models/*.joblib
+
+# Keeps the local prediction database/SQLite temporary files out of Git
+financial_predictions.db
+financial_predictions.db-journal
+financial_predictions.db-wal
+financial_predictions.db-shm
+
 models/*.pkl
 
 # Local logs and temporary files

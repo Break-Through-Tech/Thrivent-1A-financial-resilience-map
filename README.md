@@ -145,6 +145,7 @@ Thrivent-1A-financial-resilience-map/
 ├── Challenge-Project-Overview.md
 ├── Getting-Started-for-Fellows.md
 ├── requirements.txt
+├── database.py
 ├── .gitignore
 │
 ├── data/
@@ -183,7 +184,48 @@ Thrivent-1A-financial-resilience-map/
         └── test_predictions.csv
 ```
 
+## Prediction Database: Storing the Model Predictions
+
+`database.py` uses SQLite to store predictions in
+`financial_predictions.db`. No additional packages are required.
+
+Each record (saved prediction) contains:
+- A unique record ID
+- A prediction: `0` = not financially fragile, `1` = financially fragile
+- An automatically generated timestamp in UTC (Coordinated Universal Time)
+
+### Create the database
+
+Run the following command from the main project folder:
+
+```bash
+python -c "from database import initialize_database; initialize_database()"
+```
+
+### Save and retrieve predictions
+
+In Python, use:
+
+```python
+from database import initialize_database, save_prediction, get_predictions
+
+initialize_database()
+
+# Store an example prediction and return its record ID
+record_id = save_prediction(1)
+
+# Retrieve saved predictions, in descending order (newest first)
+records = get_predictions()
+print(records)
+```
+
+`save_prediction()` rejects values other than 0 or 1.
+Each successful call adds a new record to the database.
+
+The database is created locally and ignored by Git.
+
 ---
+
 
 ## 🏗️ **Project Overview**
 
