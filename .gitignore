@@ -1,20 +1,48 @@
+
+# Python cache and compiled files
 __pycache__/
 *.py[cod]
+*.pyo
+
+# Virtual environments
 .venv/
 venv/
+env/
+ENV/
 
-.ipynb_checkpoints/
-
-.vscode/
-
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+secrets.json
+credentials.json
 
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Operating system files
 .DS_Store
 Thumbs.db
 
-# Trained model binaries (JSON metadata in models/ is committed)
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Trained model binaries
 models/*.joblib
 
 # Keeps the local prediction database/SQLite temporary files out of Git
@@ -22,3 +50,11 @@ financial_predictions.db
 financial_predictions.db-journal
 financial_predictions.db-wal
 financial_predictions.db-shm
+
+models/*.pkl
+
+# Local logs and temporary files
+*.log
+*.tmp
+*.bak
+/outputs/predictions.csv

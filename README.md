@@ -28,7 +28,7 @@ Completed work:
 
  - Identified 446 exploratory candidate features during initial preprocessing and refined the final modeling dataset to 425 predictors after additional exclusions to reduce target leakage and remove survey administration variables.
 
-*Model development:* See the model results and artifacts sections for the latest training, validation, and evaluation status.
+**Model development:** See the model results and artifacts sections for the latest training, validation, and evaluation status.
 ---
 
 ## 👩🏽‍💻 **Setup and Installation**
@@ -50,6 +50,92 @@ source .venv/bin/activate   # macOS/Linux
 .\.venv\Scripts\activate    # Windows
 pip install -r requirements.txt
 ```
+
+For those who want to train the recommended model or generate predictions locally without working through the notebooks, we have also added standalone Python scripts in `src/`. Instructions for that workflow are provided below.
+
+**Requirements:** Python 3.10 and the packages listed in `requirements.txt`.
+
+#### 1. Install dependencies
+
+From the repository root, create and activate a virtual environment using the instructions above, then run:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+#### 2. Train the model
+
+```bash
+python -m src.train
+```
+
+The training script uses the existing 2025 SHED modeling dataset and feature specifications. It follows the methodology in `04_logistic_regression_baseline.ipynb`, including:
+
+- Our 80/20 train-test split
+- Five-fold cross-validation
+- Population survey weights
+- Selection of the regularization strength using weighted log loss
+
+The fitted model and its metadata are saved as:
+
+- `models/logistic_regression_with_ef.joblib`
+- `models/logistic_regression_with_ef.json`
+
+The `.joblib` file is generated locally and excluded from Git. Users must train the model before running predictions.
+
+#### 3. Generate predictions
+
+```bash
+python -m src.predict --input data/processed/model_dataset_2025.csv --output outputs/predictions.csv
+```
+
+The prediction script loads the fitted Logistic Regression pipeline, validates the required input features, and exports the results to a CSV file.
+
+The output contains:
+
+| Column | Description |
+|---|---|
+| `shedid` | Respondent identifier, if available |
+| `fragility_probability` | Predicted probability of financial fragility |
+| `predicted_fragile` | Binary classification using a 0.5 threshold |
+
+A classification of `1` indicates predicted financial fragility, while `0` indicates predicted non-fragility.
+
+The input CSV must contain the features listed in the saved model metadata. The supplied modeling dataset can be used to demonstrate the inference workflow, although predictions on training observations should not be used as independent performance estimates.
+
+#### 4. Run the prediction app
+
+```bash
+streamlit run app.py
+```
+
+The Streamlit app asks 13 questions covering the strongest predictors (emergency savings, credit card balances, spending versus income, food sufficiency, income, and household details) and shows the predicted probability of financial fragility and the resulting classification. The sidebar can load three example profiles.
+
+The model needs all 425 survey inputs. Any question the user skips, and every input the app does not ask about, is filled in from the 100 training respondents whose answers are most like the user's: the most common answer, or the median for numeric inputs. Matches on rare answers count for more than matches on common ones. The completed row is then passed through the saved preprocessing and model pipeline unchanged. This logic is in `src/inference.py`.
+
+On 500 held-out test respondents, predictions from the 13 questions alone reach a ROC AUC of 0.913, compared with 0.920 for the full model, and give the same classification 93% of the time.
+
+If `models/logistic_regression_with_ef.joblib` is missing, the app refits the pipeline once using the regularization strength recorded in `models/logistic_regression_with_ef.json`. This matches the final fit in `src/train.py` without repeating cross-validation, and the result is saved for later runs.
+
+#### 5. Run the tests
+
+```bash
+pytest
+```
+
+`tests/test_inference.py` runs three representative profiles (financially secure, getting by, and financially stretched) through the full inference path and checks input validation.
+
+
+#### 6. Continuous Integration
+
+This project uses **GitHub Actions** to automatically check the code when changes are pushed to the `main` branch or when a pull request targets `main`.
+
+The CI workflow:
+- Installs project dependencies.
+- Runs code-quality checks using Flake8.
+- Runs automated tests using pytest when test files are available.
+
+The workflow is located at `.github/workflows/ci.yml`.
 
 ### Project structure
 
