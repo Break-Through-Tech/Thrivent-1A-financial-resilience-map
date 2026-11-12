@@ -1,21 +1,22 @@
 """Turn a short set of user answers into a financial fragility prediction.
 
 The trained pipeline expects all 425 survey features, but the app only asks a
-user about a dozen of the most influential ones. This module:
+user 8 questions. This module:
 
 1. loads the saved model artifact through ``src.model.load_model``;
-2. finds the training respondents whose answers best match the user's, and
-   fills every feature the app does not ask about with the most common
-   answer (or the median, for numeric features) among those respondents;
-3. overwrites that profile with whatever the user answered, keeping linked
-   features consistent (for example ``atleast_okay`` follows ``B2``);
-4. runs the unchanged preprocessing + model pipeline via ``src.model.predict``.
+2. finds the 100 training respondents whose answers best match the user's;
+3. copies each of those respondents and replaces their answers to the asked
+   questions with the user's, keeping linked features consistent (for example
+   ``atleast_okay`` follows ``B2``);
+4. scores all 100 copies with the unchanged preprocessing + model pipeline
+   (``src.model.predict``) and reports the average probability.
 
-Filling from similar respondents, rather than from the whole sample, keeps the
-unasked answers consistent with the asked ones. A profile of the overall most
-common answers describes a financially secure household and would pull every
-prediction towards "not fragile". With no answers at all, the whole training
-split is used, giving a typical respondent.
+Each similar respondent supplies one realistic, internally consistent set of
+answers to the questions the app does not ask. Averaging over them follows
+the multiple-imputation idea of averaging predictions over plausible fills.
+It keeps fragile users' predictions from being pulled toward "typical", which
+happened when unasked answers were filled with a single most-common profile.
+With no answers at all, the whole training split is used.
 """
 
 from dataclasses import dataclass, field
@@ -38,7 +39,9 @@ DEFAULT_MODEL = "logistic_regression_with_ef"
 # Survey skip-pattern code: the question was not shown to this respondent.
 NOT_ASKED = "__NOT_ASKED__"
 
-# Number of most similar training respondents used to fill unasked features.
+# Number of most similar training respondents averaged over. 5-fold
+# cross-validation on the training split gave nearly identical results for
+# every value from 10 to 1,000; 100 sits in the middle of that range.
 N_SIMILAR = 100
 
 # Numeric answers within this distance count as matching when finding
@@ -125,7 +128,7 @@ INPUT_FIELDS = [
     ),
     InputField(
         key="spending_vs_income",
-        label="Over the past 12 months, was your spending less than, the "
+        label="In the past month, was your total spending less than, the "
               "same as, or more than your income?",
         feature="I20",
         section="finances",
@@ -147,52 +150,22 @@ INPUT_FIELDS = [
         },
     ),
     InputField(
+        key="money_left_over",
+        label="How often do you have money left over at the end of the "
+              "month?",
+        feature="B1_a",
+        section="finances",
+        options={
+            value: {"B1_a": value}
+            for value in ["Always", "Often", "Sometimes", "Rarely", "Never"]
+        },
+    ),
+    InputField(
         key="food_sufficiency",
         label="In the past month, which best describes the food eaten in "
               "your household?",
         feature="FD3",
         section="finances",
-    ),
-    InputField(
-        key="household_income",
-        label="Household income",
-        feature="ppinc7",
-        section="household",
-    ),
-    InputField(
-        key="employment",
-        label="Employment status",
-        feature="ppemploy",
-        section="household",
-    ),
-    InputField(
-        key="education",
-        label="Highest level of education",
-        feature="ppeduc5",
-        section="household",
-        derived=("ppeducat",),
-    ),
-    InputField(
-        key="housing",
-        label="Housing situation",
-        feature="GH1",
-        section="household",
-    ),
-    InputField(
-        key="age",
-        label="Age",
-        feature="ppage",
-        section="household",
-        kind="number",
-        derived=("ppagecat", "ppagect4"),
-    ),
-    InputField(
-        key="household_size",
-        label="Number of people in your household",
-        feature="pphhsize",
-        section="household",
-        kind="number",
-        derived=("pphhsize5",),
     ),
 ]
 
@@ -209,13 +182,8 @@ EXAMPLE_PROFILES = {
         "savings_account": "Yes",
         "spending_vs_income": "Less than your income",
         "managing_financially": "Living comfortably",
+        "money_left_over": "Always",
         "food_sufficiency": "Enough of the kinds of food we wanted to eat",
-        "household_income": "$150,000 or more",
-        "employment": "Working full-time",
-        "education": "Bachelor's degree",
-        "housing": "Own your home with a mortgage or loan",
-        "age": 45,
-        "household_size": 3,
     },
     "Getting by": {
         "emergency_savings": "No, but I could cover 3 months by borrowing, "
@@ -225,14 +193,9 @@ EXAMPLE_PROFILES = {
         "savings_account": "Yes",
         "spending_vs_income": "The same as your income",
         "managing_financially": "Just getting by",
+        "money_left_over": "Sometimes",
         "food_sufficiency": "Enough, but not always the kinds of food "
                             "we wanted to eat",
-        "household_income": "$50,000 to $74,999",
-        "employment": "Working full-time",
-        "education": "Some college or Associate's degree",
-        "housing": "Pay rent",
-        "age": 38,
-        "household_size": 2,
     },
     "Financially stretched": {
         "emergency_savings": "No, and I could not cover 3 months of expenses",
@@ -241,14 +204,8 @@ EXAMPLE_PROFILES = {
         "savings_account": "No",
         "spending_vs_income": "More than your income",
         "managing_financially": "Finding it difficult to get by",
+        "money_left_over": "Never",
         "food_sufficiency": "Sometimes not enough to eat",
-        "household_income": "$10,000 to $24,999",
-        "employment": "Working part-time",
-        "education": "High school graduate (high school diploma or the "
-                     "equivalent GED)",
-        "housing": "Pay rent",
-        "age": 29,
-        "household_size": 4,
     },
 }
 
@@ -325,11 +282,6 @@ class FragilityPredictor:
 
         train = training_data[self.features].reset_index(drop=True)
         self._train = train
-        self._numeric = [
-            col for col in self.features
-            if pd.api.types.is_numeric_dtype(train[col])
-        ]
-        self.reference = self._typical(train)
 
         self._options = {}
         self._derived = {}
@@ -370,24 +322,17 @@ class FragilityPredictor:
         """(min, max) seen in training for a numeric question."""
         return self._ranges[key]
 
-    def _typical(self, rows):
-        """Median of numeric features and most common value of the rest."""
-        typical = rows[self._numeric].median().to_dict()
-        for col in self.features:
-            if col not in typical:
-                typical[col] = rows[col].value_counts().index[0]
-        return typical
-
-    def _similar_profile(self, answered):
-        """Typical values among the respondents most similar to ``answered``.
+    def _similar_rows(self, answered):
+        """The training respondents most similar to ``answered``.
 
         ``answered`` maps the features the user set to their values. Each
         matching answer adds ``-log(share of respondents giving it)`` to a
         respondent's similarity, so rare answers (such as often not having
         enough to eat) count for more than common ones (such as an age band).
+        With no answers, every training respondent is returned.
         """
         if not answered:
-            return dict(self.reference)
+            return self._train.copy()
 
         score = pd.Series(0.0, index=self._train.index)
         for feat, value in answered.items():
@@ -400,7 +345,7 @@ class FragilityPredictor:
             if share > 0:
                 score += match * -np.log(share)
         nearest = score.sort_values(ascending=False, kind="stable")
-        return self._typical(self._train.loc[nearest.index[:N_SIMILAR]])
+        return self._train.loc[nearest.index[:N_SIMILAR]].copy()
 
     def _validated_values(self, answers):
         """Check answers and return the feature values each one sets."""
@@ -429,16 +374,18 @@ class FragilityPredictor:
                 values.update(self._options[key][answer])
         return values
 
-    def build_row(self, answers):
-        """Return a one-row DataFrame with every model feature filled in.
+    def build_rows(self, answers):
+        """Return the model input rows that are scored and averaged.
 
         ``answers`` maps field keys to an option label (select questions) or
-        a number. Missing keys and ``None`` values are filled in from the
-        respondents most similar to the answers given.
+        a number; missing keys and ``None`` values count as unanswered. Each
+        row is one of the most similar training respondents, with the user's
+        answers (and the features derived from them) written over theirs.
         """
         answered = self._validated_values(answers)
-        row = self._similar_profile(answered)
-        row.update(answered)
+        rows = self._similar_rows(answered)
+        for feat, value in answered.items():
+            rows[feat] = value
 
         # Keep derived features (age bands, etc.) in line with the answers.
         for f in INPUT_FIELDS:
@@ -450,18 +397,23 @@ class FragilityPredictor:
                 if value not in lookup.index:
                     # Use the closest value seen in training.
                     value = min(lookup.index, key=lambda v: abs(v - value))
-                row[target] = lookup[value]
+                rows[target] = lookup[value]
 
-        return pd.DataFrame([row], columns=self.features)
+        return rows[self.features].reset_index(drop=True)
 
     def predict(self, answers):
-        """Predict from user answers and return a ``PredictionResult``."""
-        row = self.build_row(answers)
-        result = predict(self.model, self.metadata, row).iloc[0]
+        """Predict from user answers and return a ``PredictionResult``.
+
+        The probability is the average over the similar respondents' rows
+        from ``build_rows``.
+        """
+        rows = self.build_rows(answers)
+        scores = predict(self.model, self.metadata, rows)
+        probability = float(scores["fragility_probability"].mean())
         answered = {k: v for k, v in answers.items() if v is not None}
         return PredictionResult(
-            probability=float(result["fragility_probability"]),
-            is_fragile=bool(result["predicted_fragile"]),
+            probability=probability,
+            is_fragile=probability >= self.threshold,
             threshold=self.threshold,
             answered=answered,
             n_answered=len(answered),

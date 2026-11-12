@@ -7,6 +7,7 @@ from src.inference import (
     DATA_PATH,
     EXAMPLE_PROFILES,
     INPUT_FIELDS,
+    N_SIMILAR,
     FragilityPredictor,
 )
 
@@ -37,11 +38,22 @@ def test_example_profiles_answer_every_question():
         assert set(profile) == keys, name
 
 
-def test_built_row_is_complete(predictor):
-    row = predictor.build_row(EXAMPLE_PROFILES["Getting by"])
-    assert list(row.columns) == predictor.features
-    assert len(row) == 1
-    assert not row.isna().any().any()
+def test_built_rows_are_complete_and_carry_the_answers(predictor):
+    answers = EXAMPLE_PROFILES["Getting by"]
+    rows = predictor.build_rows(answers)
+    assert list(rows.columns) == predictor.features
+    assert len(rows) == N_SIMILAR
+    # Unasked answers come from real respondents, so skipped numeric
+    # questions stay blank, as in training; the pipeline imputes them.
+    for feat, value in predictor._validated_values(answers).items():
+        assert (rows[feat] == value).all(), feat
+
+
+def test_probability_is_the_average_over_similar_respondents(predictor):
+    answers = EXAMPLE_PROFILES["Getting by"]
+    rows = predictor.build_rows(answers)
+    expected = predictor.model.predict_proba(rows)[:, 1].mean()
+    assert predictor.predict(answers).probability == pytest.approx(expected)
 
 
 @pytest.mark.parametrize(
@@ -69,7 +81,7 @@ def test_profiles_are_ranked_by_risk(predictor):
     assert probs == sorted(probs)
 
 
-def test_skipped_questions_use_typical_profile(predictor):
+def test_no_answers_averages_over_all_respondents(predictor):
     blank = predictor.predict({})
     all_none = predictor.predict({f.key: None for f in INPUT_FIELDS})
     assert 0.0 <= blank.probability <= 1.0
@@ -78,26 +90,23 @@ def test_skipped_questions_use_typical_profile(predictor):
 
 
 def test_rare_answer_outweighs_common_one(predictor):
-    # Few respondents often lack food; many are around 70. The unasked
-    # features should come from people like the former, not the latter.
+    # Few respondents often lack food; most have a savings account. The
+    # similar respondents should be chosen mainly by the rare answer.
     result = predictor.predict({
         "food_sufficiency": "Often not enough to eat",
-        "age": 70,
+        "savings_account": "Yes",
     })
     assert result.is_fragile
 
 
 def test_linked_features_follow_the_answer(predictor):
-    row = predictor.build_row({
-        "age": 45,
+    rows = predictor.build_rows({
         "managing_financially": "Just getting by",
         "credit_card_balance": "I don't have a credit card",
-    }).iloc[0]
-    assert row["ppage"] == 45
-    assert row["ppagecat"] == "45-54"
-    assert row["atleast_okay"] == "No"
-    assert row["C2A"] == "No"
-    assert row["C4A"] == "__NOT_ASKED__"
+    })
+    assert (rows["atleast_okay"] == "No").all()
+    assert (rows["C2A"] == "No").all()
+    assert (rows["C4A"] == "__NOT_ASKED__").all()
 
 
 @pytest.mark.parametrize(
@@ -105,7 +114,7 @@ def test_linked_features_follow_the_answer(predictor):
     [
         ({"not_a_question": "Yes"}, KeyError),
         ({"savings_account": "Maybe"}, ValueError),
-        ({"age": 5}, ValueError),
+        ({"money_left_over": 3}, ValueError),
     ],
 )
 def test_invalid_input_is_rejected(predictor, answers, error):
