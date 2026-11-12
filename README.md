@@ -109,13 +109,11 @@ The input CSV must contain the features listed in the saved model metadata. The 
 streamlit run app.py
 ```
 
-The Streamlit app asks 13 questions covering the strongest predictors (emergency savings, credit card balances, spending versus income, food sufficiency, income, and household details) and shows the predicted probability of financial fragility and the resulting classification. The sidebar can load three example profiles.
+The app asks 14 questions and shows the estimated probability of financial fragility and the resulting classification. All 14 questions must be answered before the app makes a prediction. The sidebar can fill the form with one of three sample profiles or clear it.
 
-The model needs all 425 survey inputs. Any question the user skips, and every input the app does not ask about, is filled in from the 100 training respondents whose answers are most like the user's: the most common answer, or the median for numeric inputs. Matches on rare answers count for more than matches on common ones. The completed row is then passed through the saved preprocessing and model pipeline unchanged. This logic is in `src/inference.py`.
+You don't need to train the model first. If `models/logistic_regression_with_ef.joblib` is missing, the app rebuilds it on first launch (this takes a few seconds).
 
-On 500 held-out test respondents, predictions from the 13 questions alone reach a ROC AUC of 0.913, compared with 0.920 for the full model, and give the same classification 93% of the time.
-
-If `models/logistic_regression_with_ef.joblib` is missing, the app refits the pipeline once using the regularization strength recorded in `models/logistic_regression_with_ef.json`. This matches the final fit in `src/train.py` without repeating cross-validation, and the result is saved for later runs.
+For how the questions were chosen and how 14 answers become a full model input, see [Prediction App: Design Decisions](#prediction-app-design-decisions) below.
 
 #### 5. Run the tests
 
@@ -123,7 +121,7 @@ If `models/logistic_regression_with_ef.joblib` is missing, the app refits the pi
 pytest
 ```
 
-`tests/test_inference.py` runs three representative profiles (financially secure, getting by, and financially stretched) through the full inference path and checks input validation.
+`tests/test_inference.py` contains 14 tests. They run three representative profiles (financially secure, getting by, and financially stretched) through the full inference path and check the averaging over similar respondents, partial answers, linked survey features, and input validation.
 
 
 #### 6. Continuous Integration
@@ -145,7 +143,9 @@ Thrivent-1A-financial-resilience-map/
 ├── Challenge-Project-Overview.md
 ├── Getting-Started-for-Fellows.md
 ├── requirements.txt
-├── database.py
+├── pytest.ini
+├── app.py                      # Streamlit prediction app
+├── database.py                 # SQLite prediction storage
 ├── .gitignore
 │
 ├── data/
@@ -171,8 +171,18 @@ Thrivent-1A-financial-resilience-map/
 │
 ├── models/
 │   ├── README.md
+│   ├── logistic_regression_with_ef.json
 │   ├── gradient_boosting_with_ef.json
 │   └── gradient_boosting_without_ef.json
+│
+├── src/
+│   ├── model.py                # load the saved model and predict
+│   ├── train.py                # train the logistic regression model
+│   ├── predict.py              # batch predictions from a CSV
+│   └── inference.py            # turn the app's 14 answers into a prediction
+│
+├── tests/
+│   └── test_inference.py
 │
 └── outputs/
     └── task3/
@@ -226,6 +236,134 @@ The database is created locally and ignored by Git.
 
 ---
 
+## Prediction App: Design Decisions
+
+*Question selection, inference method, and validation by Ansa Kanwal (November Task 2). Form interface by Ethan Wang (November Task 1), built on `src/inference.py`.*
+
+The model was trained on 425 survey features, but no user can be expected to answer 425 questions. The app asks **14**. This section explains which questions were chosen and why, how 14 answers become a full model input, how we checked the result, and how it relates to the Task 5 segmentation. The code is in `src/inference.py`.
+
+### Results at a glance
+
+All 2,587 held-out test respondents, weighted to the U.S. adult population, at the 0.5 threshold:
+
+| | Full model (all 425 answers) | App (14 answers) |
+|---|---|---|
+| **Recall** (share of fragile people caught) | 78.0% | **79.8%** |
+| Precision (share of flagged people who are fragile) | 82.1% | 79.7% |
+| ROC AUC | 0.925 | 0.922 |
+| Brier score (lower is better) | 0.103 | 0.105 |
+| Accuracy | 85.6% | 85.0% |
+| Same classification as the full model | | 93.7% |
+
+With 14 answers, the app catches slightly more fragile respondents than the full model (187 missed in the test set vs 210), and its ranking quality is close to the full model's (ROC AUC 0.922 vs 0.925). The trade-off is a few more false alarms.
+
+### How a prediction is made
+
+1. The user answers the 14 questions.
+2. `src/inference.py` finds the 100 training respondents whose answers are most similar to the user's.
+3. Each of those 100 respondents is copied, and their answers to the 14 questions are replaced with the user's. Their answers to the other 411 questions stay as they are.
+4. All 100 copies go through the saved preprocessing and model pipeline (`src/model.py`) unchanged.
+5. The app shows the **average** of the 100 probabilities and classifies it at the model's 0.5 threshold.
+
+### Why these 14 questions
+
+**Eight questions cover all of the model's top 10 features.** They were chosen from the Task 3 SHAP analysis (`notebooks/08_success_metrics.ipynb`), which ranks how much each survey question drives the logistic regression's predictions (`outputs/task3/shap_importance.csv`). We re-computed that ranking independently and it matched exactly.
+
+| Question in the app | Survey feature (SHAP rank) |
+|---|---|
+| In the past 12 months, how often did you carry an unpaid credit card balance? | `C4A` (#1) |
+| Do you have emergency savings that would cover 3 months of expenses? | `EF1` (#2), `EF2` (#3) |
+| How often do you have money left over at the end of the month? | `B1_a` (#4) |
+| Do you have a savings account, money market account, or CD? | `K21_d` (#5) |
+| In the past month, which best describes the food eaten in your household? | `FD3` (#6) |
+| What is the largest emergency expense you could cover using only your savings? | `EF7` (#7), `EF7A` (#9) |
+| In the past month, was your total spending less than, the same as, or more than your income? | `I20` (#8) |
+| How well are you managing financially these days? | `B2` (#10) |
+
+Some questions set two features:
+
+- The emergency savings answer also sets `EF2`, the follow-up asked only of people without savings ("could you cover 3 months by borrowing, using savings, or selling assets?").
+- `EF7` and `EF7A` are the same question, asked to two halves of the survey with different top dollar ranges. One question covers both.
+
+**Six household questions** (income, employment, education, housing, age, and household size) are not top SHAP features. They are easy to answer and help find respondents similar to the user.
+
+**Wording.** Every question was checked against the [SHED 2025 codebook](https://www.federalreserve.gov/consumerscommunities/files/SHED_2025codebook.pdf).
+
+**Left out on purpose.** Race, ethnicity, and gender are never asked. Marital status (`ppmarit5`, SHAP #11) and lower-ranked questions were not added because the gains from extra questions were already small (see below).
+
+**Why 14 and not 13.** The first version asked 13 questions and left out `B1_a` (SHAP #4) because its wording had not been confirmed. Once the codebook confirmed it, we compared 13 and 14 questions with 5-fold cross-validation on the training data. Adding `B1_a` gave a small but consistent improvement at every setting tried (log loss 0.001 to 0.004 lower, precision +0.7 to +1.1 points, recall +0.2 to +1.0 points). We kept it because the gain is consistent, it is a top-5 predictor, its wording is confirmed, and it completes the model's top 10.
+
+### How the unasked answers are filled in
+
+We tried three methods. Each was compared on how well it catches financially fragile respondents, the project's main goal.
+
+| Method | Result | Decision |
+|---|---|---|
+| 1. Fill every unasked answer with the most common answer overall | The most common answers describe a financially secure person. A clearly high-risk profile scored 64%, while real test respondents with similar answers averaged 93%. | Rejected |
+| 2. Find the 100 most similar respondents and build **one** profile from their most common answers | On the full test set it caught only **68%** of fragile respondents, vs 78% for the full model. A single "most typical" profile pulls every prediction toward the middle, so borderline fragile people fall under 50%. | Rejected |
+| 3. Score **each** of the 100 similar respondents with the user's answers and **average** | Catches **79.8%** of fragile respondents (table above). | **Used** |
+
+**Why method 3 is sound.** It combines two standard survey-statistics methods:
+
+- **Nearest-neighbour ("hot-deck") imputation**, which fills missing answers from similar real respondents. Survey agencies such as the U.S. Census Bureau have used it for decades (Andridge & Little, 2010).
+- **Averaging predictions over several plausible fills**, the core idea of multiple imputation (Rubin, 1987). Each similar respondent is one realistic, internally consistent way the unasked answers could look. Averaging keeps that uncertainty instead of replacing it with a single guess.
+
+**Rare answers count for more.** When finding similar respondents, each matching answer is weighted by how rare it is (`-log` of the share of respondents who gave it), an inverse-frequency similarity measure for categorical data (Boriah, Chandola & Kumar, 2008). Without it, a 70-year-old who often doesn't have enough to eat was matched mostly with financially secure 70-year-olds: about 1,950 training respondents are within 5 years of 70, but only about 230 often lack food. That profile now scores 91%.
+
+**Linked features stay consistent.** Some features are derived from others, so the app sets them together. For example, age bands follow age, `atleast_okay` follows `B2`, and answering "I don't have a credit card" also sets `C2A` (has a credit card) to "No".
+
+**Why 100 similar respondents.** We tested 10, 25, 50, 100, 200, 500, and 1,000 with 5-fold cross-validation on the training split. Each fold's model was refit without that fold, and similar respondents were drawn only from the other folds. The test set was not used. Results were nearly identical across the whole range:
+
+| Similar respondents | 10 | 25 | 50 | 100 | 200 | 500 | 1,000 |
+|---|---|---|---|---|---|---|---|
+| 14 questions: log loss | 0.332 | 0.332 | 0.331 | 0.331 | 0.331 | 0.332 | 0.333 |
+| 14 questions: recall | 79.5% | 80.0% | 79.8% | 79.9% | 79.7% | 79.9% | 79.2% |
+| 14 questions: ROC AUC | 0.927 | 0.927 | 0.927 | 0.927 | 0.928 | 0.927 | 0.928 |
+
+100 sits in the middle of this flat range, so the result does not depend on a lucky setting.
+
+### How we checked it
+
+- **Full test set:** the results table at the top of this section. All 2,587 held-out respondents were scored once with all 425 of their real answers and once with only their 14 app answers.
+- **Sample profiles** (loadable from the app's sidebar):
+
+  | Sample profile | Probability | Classification |
+  |---|---|---|
+  | Financially secure | 1.6% | Not fragile |
+  | Getting by | 67.9% | Fragile |
+  | Financially stretched | 97.7% | Fragile |
+
+- **Automated tests:** `tests/test_inference.py` runs these profiles and other checks on every pull request through GitHub Actions.
+- **Task 3 outputs verified:** we independently recomputed the main metrics in `outputs/task3/metrics.csv` (ROC AUC, PR AUC, Brier, log loss, accuracy, precision, recall) from the saved test predictions, and the logistic regression SHAP ranking. Both matched.
+- **Caveat:** several methods were compared on the same test set while developing the app. The number of similar respondents was chosen by cross-validation on the training data only, and the improvement from averaging (68% to 79.8% recall) is far larger than test-set noise.
+
+### How this relates to the segmentation (Task 5)
+
+**Did the segmentation shape the question choice?** No. The questions come from the SHAP ranking. The two analyses do point at the same variables, though: 8 of the 14 questions (age, household size, `B2`, employment, housing, `FD3`, `C2A`, and `K21_d`) are also features the Task 5 segments are built on.
+
+**Could the app tell users which household segment they are in?** Technically yes, without any new questions:
+
+- Assigning respondents to the nearest saved segment profile (`outputs/task5/segment_profiles.csv`) reproduces the notebook 09 segments for 99.1% of all 12,934 respondents.
+- Using only the 14 app answers (assigning each of the 100 rows the app builds for a respondent, then taking the most common segment), 93.7% of test respondents land in the same segment as in notebook 09.
+
+**But we recommend caution before showing segments to users.** The Task 5 stability check found that only segment 1 (older, comfortable homeowners) is stable across refits (mean Jaccard 0.88). Segments 2 to 4 average 0.63 to 0.68, so their boundaries depend on the sample. If segments are added, they should be presented as rough groupings, not fixed types. This is not implemented yet and is a decision for the team.
+
+### Other decisions
+
+- **Model:** the app uses `logistic_regression_with_ef`, the model recommended in Task 4 and produced by `src/train.py`. The inference code reuses `src/model.py` rather than duplicating its loading and prediction logic.
+- **No model file needed to deploy:** `.joblib` files are git-ignored. If the file is missing, the app rebuilds the model once using the regularization strength saved in `models/logistic_regression_with_ef.json`. This is the same final fit as `src/train.py` without repeating cross-validation, so the app works on a fresh clone or on Streamlit Community Cloud.
+- **Interface:** Task 2 included a basic placeholder `app.py`, which was always meant to be replaced. Ethan's Task 1 form replaced it. It builds its questions from `INPUT_FIELDS` and calls `FragilityPredictor.from_artifacts()` and `predictor.predict(answers)`.
+- **All questions required:** `src/inference.py` can handle skipped questions, but the form requires all 14 answers so that every prediction uses the full set.
+
+### Limitations
+
+- The probability is a statistical estimate from survey data. It is not financial advice or an assessment of any individual.
+- To catch more fragile people, the app raises slightly more false alarms than the full model (precision 79.7% vs 82.1%).
+- Race and ethnicity are not asked, but they remain model inputs. They are taken from the similar respondents, so they can still influence predictions indirectly. Whether to keep protected attributes in the model is an open team decision (see notebook 10).
+- Similar respondents are matched without survey weights.
+- The saved model must be loaded with scikit-learn 1.7.2, the version pinned in `requirements.txt`.
+
+---
 
 ## 🏗️ **Project Overview**
 
