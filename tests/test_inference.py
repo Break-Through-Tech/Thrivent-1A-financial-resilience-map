@@ -90,23 +90,20 @@ def test_no_answers_averages_over_all_respondents(predictor):
 
 
 def test_rare_answer_outweighs_common_one(predictor):
-    # Few respondents often lack food; many are around 70. The unasked
-    # features should come from people like the former, not the latter.
+    # Few respondents often lack food; most have a savings account. The
+    # similar respondents should be chosen mainly by the rare answer.
     result = predictor.predict({
         "food_sufficiency": "Often not enough to eat",
-        "age": 70,
+        "savings_account": "Yes",
     })
     assert result.is_fragile
 
 
 def test_linked_features_follow_the_answer(predictor):
     rows = predictor.build_rows({
-        "age": 45,
         "managing_financially": "Just getting by",
         "credit_card_balance": "I don't have a credit card",
     })
-    assert (rows["ppage"] == 45).all()
-    assert (rows["ppagecat"] == "45-54").all()
     assert (rows["atleast_okay"] == "No").all()
     assert (rows["C2A"] == "No").all()
     assert (rows["C4A"] == "__NOT_ASKED__").all()
@@ -117,7 +114,7 @@ def test_linked_features_follow_the_answer(predictor):
     [
         ({"not_a_question": "Yes"}, KeyError),
         ({"savings_account": "Maybe"}, ValueError),
-        ({"age": 5}, ValueError),
+        ({"money_left_over": 3}, ValueError),
     ],
 )
 def test_invalid_input_is_rejected(predictor, answers, error):

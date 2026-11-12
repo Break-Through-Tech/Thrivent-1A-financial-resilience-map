@@ -1,7 +1,7 @@
 """Turn a short set of user answers into a financial fragility prediction.
 
 The trained pipeline expects all 425 survey features, but the app only asks a
-user 14 questions. This module:
+user 8 questions. This module:
 
 1. loads the saved model artifact through ``src.model.load_model``;
 2. finds the 100 training respondents whose answers best match the user's;
@@ -167,47 +167,6 @@ INPUT_FIELDS = [
         feature="FD3",
         section="finances",
     ),
-    InputField(
-        key="household_income",
-        label="Household income",
-        feature="ppinc7",
-        section="household",
-    ),
-    InputField(
-        key="employment",
-        label="Employment status",
-        feature="ppemploy",
-        section="household",
-    ),
-    InputField(
-        key="education",
-        label="Highest level of education",
-        feature="ppeduc5",
-        section="household",
-        derived=("ppeducat",),
-    ),
-    InputField(
-        key="housing",
-        label="Housing situation",
-        feature="GH1",
-        section="household",
-    ),
-    InputField(
-        key="age",
-        label="Age",
-        feature="ppage",
-        section="household",
-        kind="number",
-        derived=("ppagecat", "ppagect4"),
-    ),
-    InputField(
-        key="household_size",
-        label="Number of people in your household",
-        feature="pphhsize",
-        section="household",
-        kind="number",
-        derived=("pphhsize5",),
-    ),
 ]
 
 FIELDS_BY_KEY = {f.key: f for f in INPUT_FIELDS}
@@ -225,12 +184,6 @@ EXAMPLE_PROFILES = {
         "managing_financially": "Living comfortably",
         "money_left_over": "Always",
         "food_sufficiency": "Enough of the kinds of food we wanted to eat",
-        "household_income": "$150,000 or more",
-        "employment": "Working full-time",
-        "education": "Bachelor's degree",
-        "housing": "Own your home with a mortgage or loan",
-        "age": 45,
-        "household_size": 3,
     },
     "Getting by": {
         "emergency_savings": "No, but I could cover 3 months by borrowing, "
@@ -243,12 +196,6 @@ EXAMPLE_PROFILES = {
         "money_left_over": "Sometimes",
         "food_sufficiency": "Enough, but not always the kinds of food "
                             "we wanted to eat",
-        "household_income": "$50,000 to $74,999",
-        "employment": "Working full-time",
-        "education": "Some college or Associate's degree",
-        "housing": "Pay rent",
-        "age": 38,
-        "household_size": 2,
     },
     "Financially stretched": {
         "emergency_savings": "No, and I could not cover 3 months of expenses",
@@ -259,13 +206,6 @@ EXAMPLE_PROFILES = {
         "managing_financially": "Finding it difficult to get by",
         "money_left_over": "Never",
         "food_sufficiency": "Sometimes not enough to eat",
-        "household_income": "$10,000 to $24,999",
-        "employment": "Working part-time",
-        "education": "High school graduate (high school diploma or the "
-                     "equivalent GED)",
-        "housing": "Pay rent",
-        "age": 29,
-        "household_size": 4,
     },
 }
 

@@ -85,6 +85,8 @@ def main():
     raw_answers = {}
     with st.form("questionnaire"):
         for section, title in SECTIONS.items():
+            if not any(field.section == section for field in INPUT_FIELDS):
+                continue
             st.subheader(title)
             for field in INPUT_FIELDS:
                 if field.section != section:
