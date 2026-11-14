@@ -85,6 +85,8 @@ def main():
     raw_answers = {}
     with st.form("questionnaire"):
         for section, title in SECTIONS.items():
+            if not any(field.section == section for field in INPUT_FIELDS):
+                continue
             st.subheader(title)
             for field in INPUT_FIELDS:
                 if field.section != section:
@@ -136,8 +138,10 @@ def main():
     classification.metric("Classification", result.label)
     st.caption(f"The model classifies scores of {result.threshold:.1%} or higher "
                "as financially fragile.")
-    st.caption("The model estimates additional survey inputs using similar "
-               "training respondents.")
+    st.caption("The model uses 425 survey inputs. For the ones not asked "
+               "here, the app takes the 100 most similar survey respondents, "
+               "scores each of them with your answers, and averages the "
+               "results.")
 
 
 def clear_answers():
