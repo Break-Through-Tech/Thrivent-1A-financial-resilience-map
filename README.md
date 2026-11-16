@@ -144,8 +144,8 @@ Thrivent-1A-financial-resilience-map/
 ├── Getting-Started-for-Fellows.md
 ├── requirements.txt
 ├── pytest.ini
-├── app.py                      # Streamlit prediction app
-├── database.py                 # SQLite prediction storage
+├── app.py                      
+├── database.py                 
 ├── .gitignore
 │
 ├── data/
@@ -176,10 +176,10 @@ Thrivent-1A-financial-resilience-map/
 │   └── gradient_boosting_without_ef.json
 │
 ├── src/
-│   ├── model.py                # load the saved model and predict
-│   ├── train.py                # train the logistic regression model
-│   ├── predict.py              # batch predictions from a CSV
-│   └── inference.py            # turn the app's 8 answers into a prediction
+│   ├── model.py                
+│   ├── train.py               
+│   ├── predict.py              
+│   └── inference.py            
 │
 ├── tests/
 │   └── test_inference.py
