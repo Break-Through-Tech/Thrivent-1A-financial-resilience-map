@@ -3,11 +3,17 @@
 Presentation-only redesign: inference logic and question definitions are unchanged.
 """
 import logging
+import sqlite3
+
+import pandas as pd
 import streamlit as st
 
+from database import get_predictions, initialize_database, save_prediction
 from src.inference import EXAMPLE_PROFILES, INPUT_FIELDS, FragilityPredictor
 
 logger = logging.getLogger(__name__)
+HISTORY_LIMIT = 10
+CLASS_LABELS = {1: "Financially fragile", 0: "Not financially fragile"}
 SECTIONS = {
     "finances": ("Your finances", ""),
     "household": ("Your household", ""),
@@ -38,6 +44,46 @@ h1 { font-size: 2.5rem !important; }
 @st.cache_resource(show_spinner="Loading the prediction model…")
 def get_predictor():
     return FragilityPredictor.from_artifacts()
+
+
+@st.cache_resource(show_spinner=False)
+def setup_database():
+    initialize_database()
+
+
+def save_to_history(result):
+    try:
+        setup_database()
+        save_prediction(int(result.is_fragile), result.probability)
+    except (sqlite3.Error, ValueError):
+        logger.exception("Could not save the prediction")
+        st.error("The prediction could not be saved to the history. "
+                 "It is still shown below. See the terminal for details.")
+
+
+def render_history():
+    st.divider()
+    st.header("Recent predictions")
+    try:
+        setup_database()
+        records = get_predictions(limit=HISTORY_LIMIT)
+    except sqlite3.Error:
+        logger.exception("Could not load the prediction history")
+        st.error("The prediction history could not be loaded. See the terminal for details.")
+        return
+    if not records:
+        st.caption("No predictions saved yet. Each prediction appears here after you select Predict.")
+        return
+
+    history = pd.DataFrame(records, columns=["ID", "prediction", "probability", "Saved at (UTC)"])
+    history["Probability"] = history["probability"].map(
+        lambda p: "Not recorded" if pd.isna(p) else f"{p:.1%}")
+    history["Classification"] = history["prediction"].map(CLASS_LABELS)
+    st.dataframe(history[["ID", "Saved at (UTC)", "Probability", "Classification"]],
+                 hide_index=True, use_container_width=True)
+    st.caption(f"Showing the last {HISTORY_LIMIT} predictions made in this app, newest first. "
+               "Each entry stores only the probability, the classification, and the time, "
+               "never your answers.")
 
 
 def load_profile():
@@ -144,6 +190,9 @@ def main():
                 logger.exception("Prediction failed")
                 st.session_state.pop("last_result", None)
                 st.error("The model could not score these answers. Review the inputs and retry.")
+            else:
+                # Saved only here, so reruns from other widgets do not save it again
+                save_to_history(st.session_state["last_result"])
 
     result = st.session_state.get("last_result")
     if result is not None:
@@ -161,6 +210,8 @@ def main():
                    "here, the app takes the 100 most similar survey respondents, "
                    "scores each of them with your answers, and averages the "
                    "results.")
+
+    render_history()
 
 
 if __name__ == "__main__":
