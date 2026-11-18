@@ -202,7 +202,10 @@ Thrivent-1A-financial-resilience-map/
 Each record (saved prediction) contains:
 - A unique record ID
 - A prediction: `0` = not financially fragile, `1` = financially fragile
+- The predicted probability of financial fragility (0 to 1)
 - An automatically generated timestamp in UTC (Coordinated Universal Time)
+
+The user's answers are not saved. Databases created before the probability column existed are upgraded automatically by `initialize_database()`; their older records show no probability.
 
 ### Create the database
 
@@ -221,18 +224,26 @@ from database import initialize_database, save_prediction, get_predictions
 
 initialize_database()
 
-# Store an example prediction and return its record ID
-record_id = save_prediction(1)
+# Store an example prediction (and its probability) and return its record ID
+record_id = save_prediction(1, 0.82)
 
 # Retrieve saved predictions, in descending order (newest first)
+# Each record is (id, prediction, probability, timestamp)
 records = get_predictions()
+recent = get_predictions(limit=10)
 print(records)
 ```
 
-`save_prediction()` rejects values other than 0 or 1.
+`save_prediction()` rejects predictions other than 0 or 1 and probabilities outside 0 to 1.
 Each successful call adds a new record to the database.
 
 The database is created locally and ignored by Git.
+
+### Prediction history in the app
+
+Each successful prediction in the Streamlit app is saved automatically, and the **Recent predictions** table below the result shows the 10 most recent ones with their probability and classification. If saving fails, the app shows an error but still displays the prediction.
+
+On Streamlit Community Cloud the database file does not survive app restarts or redeploys, and every visitor sees the same history.
 
 ---
 
